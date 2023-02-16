@@ -1,35 +1,42 @@
-import React, {useCallback, useRef, useState} from 'react'
-import {Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
-import {ImagePickerView} from "./ImagePickerView";
+import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {Dimensions, StyleSheet} from "react-native";
 import ReactNativeBlobUtil from "react-native-blob-util";
 import Canvas, {Image as CanvasImage} from "react-native-canvas";
+import EditImage from "./Image/EditImage";
+import ImageDesription from "./Image/ImageDescription";
+import GeneratedImage from "./Image/GeneratedImage";
+import Modal from "react-native-modal";
 import {centerImg} from "../helpers/centerCanvasImg";
-import ImageDrawCanvas from "./ImageDrawCanvas";
-import TagsPicker from "./TagsPicker";
-import AiImageComponent from "./AiImageComponent";
+import AddNewImage from "./Image/AddNewImage";
+import {launchCamera, launchImageLibrary} from "react-native-image-picker";
+import Toast from 'react-native-toast-message';
 
 const OPENAI_API_KEY = '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'
 
-const GenerationSteps = ({open, widget, setOpen}) => {
+const GenerationSteps = ({widget, setWidget}) => {
     const canvasRef = useRef(null)
+    const toastRef = useRef(null)
+    const [open, setOpen] = useState(false)
     const [originalImage, setOriginalImage] = useState(null);
     const [steps, setSteps] = useState(1)
-    const [description, setDescription] = useState(null)
+    const [description, setDescription] = useState('')
     const [aiImage, setAiImage] = useState('')
     const [pngBlob, setPngBlob] = useState({
         original: '',
         mask: ''
     });
+    const imageUri = originalImage && originalImage.assets[0].uri
+    const windowWidth = Dimensions.get('window').width;
+    const windowHeight = Dimensions.get('window').height;
 
     const sendEditedImg = useCallback(async () => {
-        console.log('ORIGINAL', pngBlob.original)
         ReactNativeBlobUtil.fetch('POST', 'https://api.openai.com/v1/images/edits', {
             Authorization: `Bearer ${OPENAI_API_KEY}`
         }, [
             {name: 'image', filename: 'image.png', type: 'image/png', data: pngBlob.original},
             {name: 'mask', filename: 'mask.png', type: 'image/png', data: pngBlob.mask},
             {name: 'prompt', data: description},
-            {name: 'size', data: '256x256'}
+            {name: 'size', data: '512x512'}
         ]).then((rsp) => {
             const result = rsp.json()
             setAiImage(result.data[0].url)
@@ -40,16 +47,17 @@ const GenerationSteps = ({open, widget, setOpen}) => {
         const actualPath = `data:image/svg+xml;base64, ${saveEdition}`;
         const image = new CanvasImage(canvasRef.current);
         const context = canvasRef.current.getContext('2d');
-        const {xOffset, yOffset, newWidth, newHeight} = centerImg(originalImage, canvasRef)
         image.src = actualPath
         context.globalCompositeOperation = 'destination-out'
+        const {xOffset, yOffset, newWidth, newHeight} = centerImg(originalImage, canvasRef)
         image.addEventListener('load', async () => {
             context.drawImage(image, xOffset, yOffset, newWidth, newHeight);
             let dataURL = await canvasRef.current.toDataURL("image/png")
             setPngBlob({...pngBlob, mask: dataURL.replace('data:image/png;base64,', '').slice(1, -1)})
         });
-    }, [pngBlob, centerImg, originalImage])
-
+    }, [pngBlob, originalImage])
+console.log('original', pngBlob.original)
+    console.log('mask', pngBlob.mask)
 
     const handleImageRect = useCallback((img) => {
         if (!(canvasRef.current instanceof Canvas)) {
@@ -57,8 +65,8 @@ const GenerationSteps = ({open, widget, setOpen}) => {
         }
         const image = new CanvasImage(canvasRef.current);
 
-        canvasRef.current.width = 256;
-        canvasRef.current.height = 256;
+        canvasRef.current.width = 256
+        canvasRef.current.height = 256
 
         const context = canvasRef.current.getContext('2d');
         const {xOffset, yOffset, newWidth, newHeight} = centerImg(img, canvasRef)
@@ -69,79 +77,125 @@ const GenerationSteps = ({open, widget, setOpen}) => {
             context.drawImage(image, xOffset, yOffset, newWidth, newHeight);
             let dataURL = await canvasRef.current.toDataURL("image/png")
             setPngBlob({...pngBlob, original: dataURL.replace('data:image/png;base64,', '').slice(1, -1)})
-            setOriginalImage(img)
         });
     }, [pngBlob]);
 
-    const onPressBackButton = useCallback(() => {
-        if (steps > 1) {
-            setSteps(steps - 1)
-        } else {
-            setOpen(false)
+    const onImageLibraryPress = useCallback(() => {
+        const options = {
+            selectionLimit: 1,
+            mediaType: 'photo',
+            quality: 1,
+            includeBase64: true,
+            maxWidth: Math.floor(windowWidth * 0.86),
+            maxHeight: Math.floor(windowHeight * 0.54)
+        };
+        launchImageLibrary(options, (img) => {
+            if (img.didCancel) {
+                setWidget(null)
+                return
+            }
+            handleImageRect(img)
+            setOriginalImage(img)
+            setOpen(true)
+        })
+    }, [handleImageRect]);
+
+    const onCameraPress = useCallback(() => {
+        const options = {
+            saveToPhotos: false,
+            mediaType: 'photo',
+            quality: 1,
+            includeBase64: true,
+            maxWidth: Math.floor(windowWidth * 0.86),
+            maxHeight: Math.floor(windowHeight * 0.54)
+        };
+        launchCamera(options, (img) => {
+            if (img.didCancel) {
+                setWidget(null)
+                return
+            }
+            handleImageRect(img)
+            setOriginalImage(img)
+            setOpen(true)
+        })
+    }, [handleImageRect]);
+
+    useEffect(() => {
+        if (widget === 'camera') {
+            onCameraPress()
         }
-    }, [steps, setSteps, setOpen])
+        if (widget === 'gallery') {
+            onImageLibraryPress()
+        }
+    }, [widget, setWidget])
+
+    const onClose = () => {
+        setWidget(null)
+        setSteps(1)
+        setOpen(false)
+        setDescription('')
+        setAiImage(null)
+    }
 
     return (
-        <Modal
-            visible={open}
-        >
-            {steps === 1 && (
-                <ImagePickerView
-                    handleImageRect={handleImageRect}
-                    widget={widget}
-                    steps={steps}
-                    setSteps={setSteps}
-                />
-            )}
-            {(steps === 2 && originalImage) && (
-                <ImageDrawCanvas
-                    img={originalImage}
-                    saveEditedPhoto={saveEditedPhoto}
-                    steps={steps}
-                    setSteps={setSteps}
-                />
-            )}
-            {steps === 3 && (
-                <TagsPicker
-                    description={description}
-                    setDescription={setDescription}
-                    steps={steps}
-                    setSteps={setSteps}
-                    sendEditedImg={sendEditedImg}/>
-            )}
-            {steps === 4 && (
-                <AiImageComponent aiImage={aiImage}/>
-            )}
-            {steps !== 3 && (
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={onPressBackButton}>
-                        <Text>Back</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.button} onPress={() => setSteps(steps + 1)}>
-                        <Text>Next</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+        <>
+            <Modal
+                isVisible={open}
+                style={styles.view}
+                animationIn={'slideInUp'}
+                animationInTiming={1000}
+                onBackdropPress={onClose}
+            >
+                {steps === 1 && (
+                    <AddNewImage
+                        onCameraPress={onCameraPress}
+                        onImageLibraryPress={onImageLibraryPress}
+                        widget={widget}
+                        imageUri={imageUri}
+                        setSteps={setSteps}
+                        steps={steps}
+                        setWidget={setWidget}
+                        setOriginalImage={setOriginalImage}
+                    />
+                )}
+                {(steps === 2 && originalImage) && (
+                    <EditImage
+                        img={originalImage}
+                        saveEditedPhoto={saveEditedPhoto}
+                        steps={steps}
+                        setSteps={setSteps}
+                        canvas={canvasRef}
+                        toastRef={toastRef}
+                    />
+                )}
+                {steps === 3 && (
+                    <ImageDesription
+                        description={description}
+                        setDescription={setDescription}
+                        steps={steps}
+                        setSteps={setSteps}
+                        sendEditedImg={sendEditedImg}
+                        toastRef={toastRef}
+                    />
+                )}
+                {steps === 4 && (
+                    <GeneratedImage aiImage={aiImage} onClose={onClose}/>
+                )}
+                <Toast topOffset={50}/>
+            </Modal>
             <Canvas style={{display: 'none'}} ref={canvasRef}/>
-        </Modal>
+        </>
     )
 }
 
 const styles = StyleSheet.create({
-    buttonContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 50
+    view: {
+        justifyContent: 'flex-end',
+        margin: 0,
+        padding: 0,
+        height: '100%'
     },
-    button: {
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-        backgroundColor: '#2E8B57',
-        marginBottom: 10,
-        marginRight: 10
-    },
+
 });
 
 export default GenerationSteps
