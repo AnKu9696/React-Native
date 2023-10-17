@@ -11,7 +11,7 @@ import AddNewImage from "./Image/AddNewImage";
 import {launchCamera, launchImageLibrary} from "react-native-image-picker";
 import Toast from 'react-native-toast-message';
 
-const OPENAI_API_KEY = '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'
+const OPENAI_API_KEY = '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'
 
 const GenerationSteps = ({widget, setWidget}) => {
     const canvasRef = useRef(null)
@@ -56,8 +56,6 @@ const GenerationSteps = ({widget, setWidget}) => {
             setPngBlob({...pngBlob, mask: dataURL.replace('data:image/png;base64,', '').slice(1, -1)})
         });
     }, [pngBlob, originalImage])
-console.log('original', pngBlob.original)
-    console.log('mask', pngBlob.mask)
 
     const handleImageRect = useCallback((img) => {
         if (!(canvasRef.current instanceof Canvas)) {

@@ -2,6 +2,7 @@ import React, {useCallback, useRef} from "react";
 import {
     Animated,
     Keyboard,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -21,7 +22,7 @@ const ImageDescription = ({description, setDescription, sendEditedImg, steps, se
 
     const onPressNextButton = useCallback(() => {
         if (description.length === 0) {
-            return  Toast.show({
+            return Toast.show({
                 type: 'error',
                 text1: 'Please add description first'
             });
@@ -49,35 +50,35 @@ const ImageDescription = ({description, setDescription, sendEditedImg, steps, se
     }
     return (
         <Animated.View style={[styles.view, {height: animatedHeight}]}>
-            <View style={{flex:1}}>
-            <TouchableWithoutFeedback onPress={onKeyPress}>
-                <View style={styles.container}>
-                    <Text style={[styles.textBold, {marginBottom: 8}]}>Well Done!</Text>
-                    <Text style={[styles.textLight, {marginBottom: 24}]}>Now let’s combine your image with new
-                        objects</Text>
-                    <View style={{height:'71%', maxHeight: 225, flex: 1}}>
-                        <TextInput
-                            style={styles.input}
-                            multiline={true}
-                            numberOfLines={4}
-                            onChangeText={setDescription}
-                            value={description}
-                            onKeyPress={onKeyPress}
-                            onPressIn={heightChangeAnimation}
-                            placeholderTextColor='rgba(28, 25, 34, 0.5)'
-                            placeholder="Start typing what objects would you like to add to your image"
-                        />
+            <View style={{flex: 1}}>
+                <TouchableWithoutFeedback onPress={onKeyPress}>
+                    <View style={styles.container}>
+                        <Text style={[styles.textBold, {marginBottom: 8}]}>Well Done!</Text>
+                        <Text style={[styles.textLight, {marginBottom: 24}]}>Now let’s combine your image with new
+                            objects</Text>
+                        <View style={{height: '71%', maxHeight: 225, flex: 1}}>
+                            <TextInput
+                                style={[styles.input, Platform.OS === 'android' && {textAlignVertical: "top"}]}
+                                multiline={true}
+                                numberOfLines={4}
+                                onChangeText={setDescription}
+                                value={description}
+                                onKeyPress={onKeyPress}
+                                onPressIn={heightChangeAnimation}
+                                placeholderTextColor='rgba(28, 25, 34, 0.5)'
+                                placeholder="Start typing what objects would you like to add to your image"
+                            />
+                        </View>
                     </View>
-                </View>
-            </TouchableWithoutFeedback>
-            <LinearGradient start={{x: 0, y: 0}} end={{x: 1, y: 0}}
-                            colors={['rgba(152, 151, 218, 0.2)', 'rgba(22, 22, 24, 0.2)']}
-                            style={styles.buttonContainer}>
-                <TouchableOpacity style={{width: '100%', alignItems: "center", paddingVertical: '5.5%'}}
-                                  onPress={onPressNextButton}>
-                    <Text style={[styles.textBold, {fontSize: 18}]}>Next</Text>
-                </TouchableOpacity>
-            </LinearGradient>
+                </TouchableWithoutFeedback>
+                <LinearGradient start={{x: 0, y: 0}} end={{x: 1, y: 0}}
+                                colors={['rgba(152, 151, 218, 0.2)', 'rgba(22, 22, 24, 0.2)']}
+                                style={styles.buttonContainer}>
+                    <TouchableOpacity style={{width: '100%', alignItems: "center", paddingVertical: '5.5%'}}
+                                      onPress={onPressNextButton}>
+                        <Text style={[styles.textBold, {fontSize: 18}]}>Next</Text>
+                    </TouchableOpacity>
+                </LinearGradient>
             </View>
         </Animated.View>
 
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
         fontWeight: 500,
         color: 'white',
         opacity: 1,
-        fontFamily: 'Rubik-Light'
+        fontFamily: 'Rubik-Medium'
     },
     textLight: {
         color: '#B9B2C4',

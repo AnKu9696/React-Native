@@ -1,4 +1,4 @@
-import {Image, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {Image, StyleSheet, Text, TouchableOpacity, View, Platform} from "react-native";
 import React, {useState} from "react";
 import GenerationSteps from "./GenerationSteps";
 import LinearGradient from "react-native-linear-gradient";
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     textContainer: {
         flex:1,
         flexDirection: 'row',
-        marginTop: '12%',
+        marginTop: Platform.OS === 'ios' ? '12%' : '8%',
         marginBottom: '3%',
         marginLeft: 30,
         justifyContent: 'space-between',

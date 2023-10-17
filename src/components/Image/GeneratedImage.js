@@ -1,23 +1,52 @@
-import {ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import React from "react";
 import {images} from "../../../assets";
-import {
-    BallIndicator,
-} from 'react-native-indicators';
+import {BallIndicator,} from 'react-native-indicators';
 import LinearGradient from "react-native-linear-gradient";
 import {CameraRoll} from "@react-native-camera-roll/camera-roll";
 import Toast from "react-native-toast-message";
+import ReactNativeBlobUtil from "react-native-blob-util";
+import {getPermissionAndroid} from "../../helpers/androidPermision";
 
 const GeneratedImage = ({aiImage, onClose}) => {
     const windowWidth = Dimensions.get('window').width;
     const windowHeight = Dimensions.get('window').height;
 
-    const downloadImage = () => {
-        CameraRoll.save(aiImage, {type: 'photo'})
-            .then(() =>  Toast.show({
-            type: 'success',
-            text1: 'The image has been successfully added to your device library!'
-        })).catch(err => console.log('err:', err))
+    const downloadImage = async () => {
+        if (Platform.OS === 'android') {
+            const granted = await getPermissionAndroid();
+            if (!granted) {
+                return;
+            }
+        }
+        if (Platform.OS === 'android') {
+            const {config, fs} = ReactNativeBlobUtil;
+            const PictureDir = fs.dirs.PictureDir;
+            const date = new Date()
+            let options = {
+                fileCache: true,
+                addAndroidDownloads: {
+                    useDownloadManager: true,
+                    notification: true,
+                    path:
+                        PictureDir +
+                        '/image_' +
+                        Math.floor(date.getTime() +
+                            date.getSeconds() / 2) + '.png',
+                    description: 'Image',
+                },
+            };
+            config(options)
+                .fetch('GET', aiImage)
+                .then(res => CameraRoll.save(res.data, {type: 'photo'}))
+                .then(() => alert('Image Downloaded Successfully.'))
+        } else {
+            CameraRoll.save(aiImage, {type: 'photo'})
+                .then(() => Toast.show({
+                    type: 'success',
+                    text1: 'The image has been successfully added to your device library!'
+                })).catch(err => console.log('err:', err))
+        }
     };
 
     return (
@@ -25,23 +54,29 @@ const GeneratedImage = ({aiImage, onClose}) => {
             {aiImage ?
                 (
                     <View style={styles.container}>
-                        <View style={{flex:3}}>
+                        <View style={{flex: 3}}>
                             <Text style={[styles.textBold, {marginBottom: 19}]}>Congratulations!</Text>
                             <Image style={[styles.photo, {
                                 width: Math.floor(windowWidth * 0.86),
                                 height: Math.floor(windowHeight * 0.54)
                             }]} source={{uri: aiImage}}/>
                         </View>
-                        <View style={{marginTop: '20%', flex:1}}>
+                        <View style={{marginTop: '20%', flex: 1}}>
                             <TouchableOpacity
-                                style={[styles.button, {width: '100%', alignItems: "center", marginBottom: 20,paddingVertical: '5.5%'}]}
+                                style={[styles.button, {
+                                    width: '100%',
+                                    alignItems: "center",
+                                    marginBottom: 20,
+                                    paddingVertical: '5.5%'
+                                }]}
                                 onPress={downloadImage}>
                                 <Text style={[styles.textBold, {fontSize: 18}]}>Save</Text>
                             </TouchableOpacity>
                             <LinearGradient start={{x: 0, y: 0}} end={{x: 1, y: 0}}
                                             colors={['rgba(152, 151, 218, 0.2)', 'rgba(22, 22, 24, 0.2)']}
                                             style={styles.buttonContainer}>
-                                <TouchableOpacity style={{width: '100%', alignItems: "center", paddingVertical: '5.5%'}} onPress={onClose}>
+                                <TouchableOpacity style={{width: '100%', alignItems: "center", paddingVertical: '5.5%'}}
+                                                  onPress={onClose}>
                                     <Text style={[styles.textBold, {fontSize: 18}]}>New Picture</Text>
                                 </TouchableOpacity>
                             </LinearGradient>
@@ -64,7 +99,7 @@ const GeneratedImage = ({aiImage, onClose}) => {
                         <View style={{flex: 1}}>
                             <Image style={{width: '100%', height: '80%', resizeMode: 'contain'}}
                                    source={images.largeMyPictureHome}/>
-                            <BallIndicator count={8}  size={70} color={'#8484C7'}/>
+                            <BallIndicator count={8} size={70} color={'#8484C7'}/>
                         </View>
                     </View>
                 )}
@@ -104,7 +139,7 @@ const styles = StyleSheet.create({
         fontWeight: 500,
         color: 'white',
         opacity: 1,
-        fontFamily: 'Rubik-Light'
+        fontFamily: 'Rubik-Medium'
     },
     textLight: {
         color: '#B9B2C4',
@@ -114,7 +149,7 @@ const styles = StyleSheet.create({
     textContainer: {
         flex: 1,
         flexDirection: 'column',
-        marginTop: '11%'
+        marginTop: Platform.OS === 'ios' ? '11%' : '1%'
     },
 });
 

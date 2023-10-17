@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         fontWeight: 500,
         color: 'white',
         opacity: 1,
-        fontFamily: 'Rubik-Light'
+        fontFamily: 'Rubik-Medium'
     },
     textLight: {
         color: '#B9B2C4',
